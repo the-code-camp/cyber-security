@@ -1,15 +1,19 @@
 ## 🔍 Lab 3: File Upload – Reverse Shell & RCE
 
 ### 💼 Scenario
-A document submission form accepts uploads without validating MIME type or restricting executable files.
+A document submission form accepts uploads without validating `MIME` type or restricting executable files. Devs believe the web server won’t execute uploads.
 
 ### 🎯 Objective
-Upload a PHP reverse shell and gain access to the system.
+Upload a PHP reverse shell and gain access to the system. Exploit the vulnerable file upload functionality in DVWA to:
+
+- Upload a malicious PHP reverse shell
+- Trigger the shell and connect back to your system
+- Gain access to the DVWA container's shell
 
 ## 🧪 Steps
 
 ### 🔹 Step 1: Write the PHP Reverse Shell Script
-1. On your host machine (attacker), create a file named `reverse.php` with this code::
+1. On your host machine (`attacker`), create a file named `reverse.php` with this code::
 
 ```php
 <?php
@@ -59,5 +63,5 @@ hostname
 ### 🛡️ Mitigation
 
 - Disallow dangerous extensions.
-- Store uploaded files outside webroot.
+- Store uploaded files outside `webroot`.
 - Sanitize and rename files on upload.
